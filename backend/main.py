@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
@@ -24,7 +24,7 @@ app = FastAPI(
 # CORS pour le frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://localhost:3000"],
+    allow_origins=["*"],  # Permissif pour développement
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,7 +73,7 @@ async def health():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-@app.get("/api/system")
+@app.get("/api/v1/system/info")
 async def system_info():
     return {
         "platform": "docker",
@@ -109,8 +109,27 @@ async def set_cached_data(key: str, data: Dict[Any, Any], ttl: int = 300):
         logger.error(f"Erreur cache écriture {key}: {e}")
 
 # Prix Kaspa (proxy CoinGecko)
-@app.get("/api/prices", response_model=PriceResponse)
+@app.get("/api/v1/prices/current", response_model=PriceResponse)
 async def get_kaspa_prices():
+
+@app.get("/api/v1/prices/history")
+async def get_price_history(days: int = 7):
+    # Simuler des données historiques
+    import random
+    from datetime import datetime, timedelta
+    
+    data = []
+    base_price = 0.02
+    
+    for i in range(days * 24):  # Une donnée par heure
+        timestamp = datetime.now() - timedelta(hours=i)
+        price = base_price + random.uniform(-0.005, 0.005)
+        data.append({
+            "timestamp": timestamp.isoformat(),
+            "price": round(price, 6)
+        })
+    
+    return {"data": list(reversed(data))}
     cache_key = "kaspa_prices"
     
     # Vérifier cache
@@ -149,7 +168,7 @@ async def get_kaspa_prices():
         raise HTTPException(status_code=503, detail="Service prix temporairement indisponible")
 
 # Status du nœud Kaspa
-@app.get("/api/node/status", response_model=NodeStatus)
+@app.get("/api/v1/node/status", response_model=NodeStatus)
 async def get_node_status():
     kaspa_rpc = os.getenv("KASPA_RPC_URL", "http://localhost:16210")
     
@@ -188,7 +207,7 @@ async def get_node_status():
         raise HTTPException(status_code=503, detail="Impossible de contacter le nœud Kaspa")
 
 # Gestion wallet (basique pour dev)
-@app.post("/api/wallet/create")
+@app.post("/api/v1/wallets/create")
 async def create_wallet(payload: WalletCreate):
     try:
         # Génération d'une adresse de test (remplacer par vraie génération)
@@ -227,7 +246,7 @@ async def create_wallet(payload: WalletCreate):
         logger.error(f"Erreur création wallet: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la création du wallet")
 
-@app.get("/api/wallets")
+@app.get("/api/v1/wallets/")
 async def list_wallets():
     try:
         wallets_dir = "/app/wallets"
@@ -252,6 +271,27 @@ async def list_wallets():
     except Exception as e:
         logger.error(f"Erreur liste wallets: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la récupération des wallets")
+
+# WebSocket endpoint
+@app.websocket("/ws")
+async def websocket_handler(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            # Envoyer des données de test
+            test_data = {
+                "type": "status_update",
+                "data": {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "kaspa_price": 0.025,
+                    "node_status": "synced",
+                    "block_count": 1000000
+                }
+            }
+            await websocket.send_text(json.dumps(test_data))
+            await asyncio.sleep(30)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
 
 if __name__ == "__main__":
     import uvicorn

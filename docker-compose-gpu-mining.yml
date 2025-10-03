@@ -1,0 +1,278 @@
+version: '3.8'
+
+services:
+  # Nœud Kaspa pour mining
+  kaspa-node:
+    build:
+      context: ./kaspa-wallet
+      dockerfile: Dockerfile
+    container_name: kaspazof-kaspa-node
+    restart: unless-stopped
+    command: ["node"]
+    environment:
+      - KASPA_NETWORK=mainnet
+      - KASPA_LOG_LEVEL=info
+      - KASPA_RPC_USER=kaspa
+      - KASPA_RPC_PASS=${KASPA_RPC_PASSWORD:-changeme123}
+    ports:
+      - "127.0.0.1:16210:16210"  # RPC
+      - "127.0.0.1:16211:16211"  # P2P
+    volumes:
+      - kaspa_node_data:/kaspa/data
+      - kaspa_logs:/kaspa/logs
+    networks:
+      - kaspa_network
+
+  # Kaspa-Stratum Bridge pour solo mining
+  stratum-bridge:
+    image: ubuntu:22.04
+    container_name: kaspazof-stratum-bridge
+    restart: unless-stopped
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y wget tar &&
+        cd /tmp &&
+        wget -O bridge.tar.gz https://github.com/KaffinPX/kaspa-stratum-bridge/releases/download/v1.2.0/kaspa-stratum-bridge-v1.2.0-linux-amd64.tar.gz &&
+        tar -xzf bridge.tar.gz &&
+        chmod +x kaspa-stratum-bridge &&
+        ./kaspa-stratum-bridge --kaspad-address=kaspa-node:16210 --listen=0.0.0.0:5555
+      "
+    ports:
+      - "127.0.0.1:5555:5555"  # Stratum bridge
+    networks:
+      - kaspa_network
+    depends_on:
+      - kaspa-node
+    profiles:
+      - solo-mining
+
+  # Community Miner (GPU optimisé)
+  community-miner:
+    image: ubuntu:22.04
+    container_name: kaspazof-community-miner
+    restart: unless-stopped
+    environment:
+      - MINING_ADDRESS=${MINING_ADDRESS}
+      - POOL_URL=${POOL_URL:-stratum+tcp://pool.woolypooly.com:3112}
+      - MINING_MODE=${MINING_MODE:-pool}
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y wget unzip &&
+        cd /tmp &&
+        wget -O miner.zip https://github.com/tmrlvi/kaspa-miner/releases/download/v1.4.3/kaspa-miner-v1.4.3-linux.zip &&
+        unzip miner.zip &&
+        chmod +x kaspa-miner* &&
+        if [ \"$$MINING_MODE\" = \"solo\" ]; then
+          ./kaspa-miner* -a $$MINING_ADDRESS -s stratum-bridge:5555
+        else
+          ./kaspa-miner* -a $$MINING_ADDRESS -s $$POOL_URL
+        fi
+      "
+    networks:
+      - kaspa_network
+    depends_on:
+      - kaspa-node
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # BzMiner (GPU haute performance)
+  bzminer:
+    image: ubuntu:22.04
+    container_name: kaspazof-bzminer
+    restart: unless-stopped
+    environment:
+      - MINING_ADDRESS=${MINING_ADDRESS}
+      - POOL_URL=${POOL_URL:-stratum+tcp://pool.woolypooly.com:3112}
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y wget tar &&
+        cd /tmp &&
+        wget -O bzminer.tar.gz https://github.com/bzminer/bzminer/releases/download/v21.3.7/bzminer_v21.3.7_linux.tar.gz &&
+        tar -xzf bzminer.tar.gz &&
+        cd bzminer_v21.3.7_linux &&
+        chmod +x bzminer &&
+        ./bzminer -a kaspa -w $$MINING_ADDRESS -p $$POOL_URL
+      "
+    networks:
+      - kaspa_network
+    depends_on:
+      - kaspa-node
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles:
+      - gpu-mining
+
+  # lolMiner (Pool mining optimisé)
+  lolminer:
+    image: ubuntu:22.04
+    container_name: kaspazof-lolminer
+    restart: unless-stopped
+    environment:
+      - MINING_ADDRESS=${MINING_ADDRESS}
+      - POOL_HOST=${POOL_HOST:-pool.woolypooly.com}
+      - POOL_PORT=${POOL_PORT:-3112}
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y wget tar &&
+        cd /tmp &&
+        wget -O lolminer.tar.gz https://github.com/Lolliedieb/lolMiner-releases/releases/download/1.88/lolMiner_v1.88_Lin64.tar.gz &&
+        tar -xzf lolminer.tar.gz &&
+        cd 1.88 &&
+        chmod +x lolMiner &&
+        ./lolMiner --algo KASPA --pool $$POOL_HOST:$$POOL_PORT --user $$MINING_ADDRESS
+      "
+    networks:
+      - kaspa_network
+    depends_on:
+      - kaspa-node
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles:
+      - gpu-mining
+
+  # Mining Monitor avec support GPU
+  mining-monitor:
+    build:
+      context: ./mining-monitor
+      dockerfile: Dockerfile
+    container_name: kaspazof-mining-monitor
+    restart: unless-stopped
+    environment:
+      - KASPA_RPC_URL=http://kaspa-node:16210
+      - KASPA_RPC_USER=kaspa
+      - KASPA_RPC_PASS=${KASPA_RPC_PASSWORD:-changeme123}
+      - MINING_ADDRESS=${MINING_ADDRESS}
+      - GPU_MONITORING=true
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - kaspa_logs:/kaspa/logs:ro
+    networks:
+      - kaspa_network
+    depends_on:
+      - kaspa-node
+
+  # Services de base
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaspazof-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kaspazof
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./mining-monitor/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - kaspa_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: kaspazof-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - kaspa_network
+
+  # API avec support GPU mining
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: kaspazof-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+      KASPA_RPC_URL: http://kaspa-node:16210
+      KASPA_RPC_USER: kaspa
+      KASPA_RPC_PASS: ${KASPA_RPC_PASSWORD:-changeme123}
+      MINING_ADDRESS: ${MINING_ADDRESS}
+      GPU_MINING_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - wallet_data:/app/wallets
+    networks:
+      - kaspa_network
+    depends_on:
+      - postgres
+      - redis
+      - kaspa-node
+
+  # Frontend
+  frontend:
+    image: nginx:alpine
+    container_name: kaspazof-frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./frontend-bootstrap:/usr/share/nginx/html:ro
+      - ./nginx-mining.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - kaspa_network
+    depends_on:
+      - api
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: kaspazof-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus-mining.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - kaspa_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: kaspazof-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana-mining-dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - kaspa_network
+    depends_on:
+      - prometheus
+
+volumes:
+  kaspa_node_data:
+  kaspa_logs:
+  postgres_data:
+  wallet_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  kaspa_network:
+    driver: bridge
