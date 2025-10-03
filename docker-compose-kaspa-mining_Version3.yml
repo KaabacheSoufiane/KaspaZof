@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  kaspa:
+    image: kaspad/kaspad:latest
+    container_name: kaspa-node
+    restart: unless-stopped
+    volumes:
+      - kaspa_data:/var/lib/kaspad
+      - ./kaspa/config:/etc/kaspa:ro
+    environment:
+      KASPA_NETWORK: "mainnet" # or "testnet" for testing
+    ports:
+      - "127.0.0.1:16210:16210" # API/RPC - bind to localhost only
+      - "127.0.0.1:16211:16211" # P2P - bind to localhost if not used publicly
+    healthcheck:
+      test: ["CMD-SHELL", "ss -ltn | grep -q 16210 || exit 1"]
+      interval: 15s
+      retries: 5
+
+  miner:
+    image: alpine:latest
+    container_name: kaspa-miner-placeholder
+    command: ["sh", "-c", "echo 'Placeholder miner - replace image/command with actual miner (gminer/bzMiner/etc.)'; sleep infinity"]
+    depends_on:
+      - kaspa
+    environment:
+      # if solo mining to kaspa node via stratum or miner adapter, configure accordingly
+      MINER_WALLET: "${MINER_WALLET:-your_kaspa_wallet_address}"
+      POOL_URL: "${POOL_URL:-pool.example:3333}" # optional for pool mining
+    networks:
+      - internal
+
+  monitor:
+    image: prom/prometheus:latest
+    container_name: prometheus-monitor
+    volumes:
+      - ./monitor/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - internal
+
+volumes:
+  kaspa_data:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true

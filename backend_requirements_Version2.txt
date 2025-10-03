@@ -1,0 +1,3 @@
+# DEPRECATED - Utiliser backend/requirements.txt
+# Ce fichier contient des versions obsolètes avec vulnérabilités
+# Référence: backend/requirements.txt pour les versions sécurisées

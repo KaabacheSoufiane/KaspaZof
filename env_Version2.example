@@ -1,0 +1,10 @@
+# Local development variables (do NOT commit real values)
+POSTGRES_PASSWORD=devpassword
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin123
+DASHBOARD_API_KEY=dev-local-key
+DATABASE_URL=postgresql://postgres:devpassword@postgres:5432/construction_tracker
+REDIS_URL=redis://redis:6379/0
+ANTHROPIC_API_KEY=sk-ant-placeholder-for-dev
+MINER_WALLET=your_kaspa_wallet_address_here
+POOL_URL=pool.example:3333

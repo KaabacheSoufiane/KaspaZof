@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  # Base de données
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaspazof-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kaspazof
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: kaspazof-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 3
+
+  # Storage MinIO
+  minio:
+    image: minio/minio:latest
+    container_name: kaspazof-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      retries: 3
+
+  # Kaspa Node
+  kaspa:
+    image: kaspanet/kaspad:latest
+    container_name: kaspazof-kaspa
+    restart: unless-stopped
+    volumes:
+      - kaspa_data:/app/data
+    environment:
+      - KASPA_NETWORK=mainnet
+    ports:
+      - "127.0.0.1:16210:16210"  # RPC - localhost only
+    command: ["kaspad", "--rpcbind=0.0.0.0:16210", "--rpclisten=0.0.0.0:16210"]
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep 16210 || exit 1"]
+      interval: 30s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: kaspazof-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      KASPA_RPC_URL: http://kaspa:16210
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kaspa:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - wallet_data:/app/wallets
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      retries: 3
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: kaspazof-frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+
+  # Monitoring Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: kaspazof-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  # Monitoring Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: kaspazof-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  kaspa_data:
+  wallet_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    driver: bridge

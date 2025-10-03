@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaspaZof - Crypto Mining & Wallet Platform</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="public/css/sweetalert2.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="src/assets/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-coins"></i>
+                <span>KaspaZof</span>
+            </div>
+            <div class="nav-menu">
+                <a href="#dashboard" class="nav-link active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#wallet" class="nav-link" data-section="wallet">
+                    <i class="fas fa-wallet"></i> Wallet
+                </a>
+                <a href="#mining" class="nav-link" data-section="mining">
+                    <i class="fas fa-pickaxe"></i> Mining
+                </a>
+                <a href="#charts" class="nav-link" data-section="charts">
+                    <i class="fas fa-chart-line"></i> Charts
+                </a>
+                <a href="#news" class="nav-link" data-section="news">
+                    <i class="fas fa-newspaper"></i> Crypto News
+                </a>
+                <a href="#kaspa-info" class="nav-link" data-section="kaspa-info">
+                    <i class="fas fa-info-circle"></i> Kaspa Info
+                </a>
+            </div>
+            <div class="nav-status">
+                <div class="status-indicator" id="connection-status">
+                    <i class="fas fa-circle"></i>
+                    <span>Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="content-section active">
+            <div class="section-header">
+                <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+                <button class="btn btn-primary" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            
+            <div class="dashboard-grid">
+                <!-- System Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-server"></i> System Status</h3>
+                    </div>
+                    <div class="card-body" id="system-status">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Kaspa Price -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-dollar-sign"></i> Kaspa Price</h3>
+                    </div>
+                    <div class="card-body" id="price-info">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Node Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-network-wired"></i> Node Status</h3>
+                    </div>
+                    <div class="card-body" id="node-status">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Mining Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-pickaxe"></i> Mining Stats</h3>
+                    </div>
+                    <div class="card-body" id="mining-stats">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Wallet Section -->
+        <section id="wallet" class="content-section">
+            <div class="section-header">
+                <h1><i class="fas fa-wallet"></i> Kaspa Wallet</h1>
+                <button class="btn btn-success" onclick="createWallet()">
+                    <i class="fas fa-plus"></i> Create Wallet
+                </button>
+            </div>
+            
+            <div class="wallet-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-list"></i> My Wallets</h3>
+                    </div>
+                    <div class="card-body" id="wallet-list">
+                        <div class="loading">Loading wallets...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mining Section -->
+        <section id="mining" class="content-section">
+            <div class="section-header">
+                <h1><i class="fas fa-pickaxe"></i> Mining Control</h1>
+                <button class="btn btn-primary" onclick="toggleMining()">
+                    <i class="fas fa-play"></i> Start Mining
+                </button>
+            </div>
+            
+            <div class="mining-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-cogs"></i> Mining Configuration</h3>
+                    </div>
+                    <div class="card-body" id="mining-config">
+                        <!-- Mining config will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-bar"></i> Mining Performance</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="mining-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section id="charts" class="content-section">
+            <div class="section-header">
+                <h1><i class="fas fa-chart-line"></i> Price Charts</h1>
+                <div class="chart-controls">
+                    <select id="chart-period" onchange="updateChart()">
+                        <option value="1">24H</option>
+                        <option value="7" selected>7D</option>
+                        <option value="30">30D</option>
+                        <option value="90">90D</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="charts-container">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-line-chart"></i> Kaspa Price History</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="price-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- News Section -->
+        <section id="news" class="content-section">
+            <div class="section-header">
+                <h1><i class="fas fa-newspaper"></i> Crypto News</h1>
+                <button class="btn btn-primary" onclick="refreshNews()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            
+            <div class="news-container">
+                <div class="news-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="kaspa">Kaspa</button>
+                    <button class="filter-btn" data-filter="mining">Mining</button>
+                    <button class="filter-btn" data-filter="crypto">Crypto</button>
+                </div>
+                <div id="news-feed" class="news-feed">
+                    <div class="loading">Loading news...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Kaspa Info Section -->
+        <section id="kaspa-info" class="content-section">
+            <div class="section-header">
+                <h1><i class="fas fa-info-circle"></i> Kaspa Information</h1>
+            </div>
+            
+            <div class="info-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-cube"></i> Network Stats</h3>
+                    </div>
+                    <div class="card-body" id="network-stats">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-book"></i> About Kaspa</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-content">
+                            <p><strong>Kaspa</strong> is a proof-of-work cryptocurrency that implements the GHOSTDAG protocol.</p>
+                            <ul>
+                                <li>Fast block times (1 second)</li>
+                                <li>High throughput</li>
+                                <li>Secure and decentralized</li>
+                                <li>ASIC-resistant mining</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="public/js/sweetalert2.min.js"></script>
+    <script src="public/js/chart.min.js"></script>
+    <script src="src/services/api.js"></script>
+    <script src="src/services/websocket.js"></script>
+    <script src="src/utils/helpers.js"></script>
+    <script src="src/components/wallet.js"></script>
+    <script src="src/components/mining.js"></script>
+    <script src="src/components/charts.js"></script>
+    <script src="src/components/news.js"></script>
+    <script src="src/app.js"></script>
+</body>
+</html>
