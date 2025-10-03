@@ -18,11 +18,23 @@ fi
 
 # Génération des mots de passe aléatoirement sécurisés
 generate_password() {
-    openssl rand -base64 32 | tr -d "=+/" | cut -c1-25
+    local password
+    password=$(openssl rand -base64 32 2>/dev/null | tr -d "=+/" | cut -c1-25)
+    if [ -z "$password" ] || [ ${#password} -lt 20 ]; then
+        echo "❌ Erreur lors de la génération du mot de passe" >&2
+        exit 1
+    fi
+    echo "$password"
 }
 
 generate_key() {
-    openssl rand -hex 32
+    local key
+    key=$(openssl rand -hex 32 2>/dev/null)
+    if [ -z "$key" ] || [ ${#key} -ne 64 ]; then
+        echo "❌ Erreur lors de la génération de la clé" >&2
+        exit 1
+    fi
+    echo "$key"
 }
 
 # Création du fichier .env

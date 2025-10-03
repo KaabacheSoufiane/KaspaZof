@@ -56,7 +56,7 @@ MINING_MODE=""
 POOL_URL=""
 MINING_ADDRESS=""
 MINING_THREADS="auto"
-MINING_WORKER="kaspazof-$(hostname)"
+MINING_WORKER="kaspazof-$(hostname 2>/dev/null || echo 'unknown')"
 SERVICES_TO_START=""
 
 while [[ $# -gt 0 ]]; do
