@@ -110,13 +110,31 @@ start_miner() {
         exit 1
     fi
     
-    exec kaspaminer \
-        --rpcserver="${KASPA_RPC_SERVER:-localhost:16210}" \
-        --rpcuser="${KASPA_RPC_USER}" \
-        --rpcpass="${KASPA_RPC_PASS}" \
-        --miningaddr="${MINING_ADDRESS}" \
-        --numblocks="${NUM_BLOCKS:-0}" \
-        --logdir=/kaspa/logs
+    # Détecter le mode de minage (solo vs pool)
+    if [ -n "${MINING_POOL}" ]; then
+        echo "🏆 Mode Pool Mining: ${MINING_POOL}"
+        
+        # Extraire host et port du pool
+        POOL_HOST=$(echo "${MINING_POOL}" | sed 's|.*://||' | cut -d: -f1)
+        POOL_PORT=$(echo "${MINING_POOL}" | sed 's|.*://||' | cut -d: -f2)
+        
+        exec kaspaminer \
+            --pool-address="${POOL_HOST}:${POOL_PORT}" \
+            --mining-address="${MINING_ADDRESS}" \
+            --worker-name="${MINING_WORKER:-kaspazof-$(hostname)}" \
+            --threads="${MINING_THREADS:-auto}" \
+            --logdir=/kaspa/logs
+    else
+        echo "🏆 Mode Solo Mining"
+        exec kaspaminer \
+            --rpcserver="${KASPA_RPC_SERVER:-localhost:16210}" \
+            --rpcuser="${KASPA_RPC_USER}" \
+            --rpcpass="${KASPA_RPC_PASS}" \
+            --miningaddr="${MINING_ADDRESS}" \
+            --numblocks="${NUM_BLOCKS:-0}" \
+            --threads="${MINING_THREADS:-auto}" \
+            --logdir=/kaspa/logs
+    fi
 }
 
 # Fonction pour les outils (kaspactl, genkeypair)

@@ -1,10 +1,11 @@
-# Dockerfile pour Kaspa Wallet officiel
+# Dockerfile pour Kaspa Node/Wallet/Miner complet
 FROM ubuntu:22.04
 
 # Métadonnées
 LABEL maintainer="BJATechnology"
-LABEL description="Kaspa Wallet officiel v0.12.22 dans un conteneur Docker"
+LABEL description="Kaspa Node/Wallet/Miner complet v0.12.22 avec support pool mining"
 LABEL version="0.12.22"
+LABEL org.opencontainers.image.source="https://github.com/BJATechnology/KaspaZof"
 
 # Variables d'environnement
 ENV KASPA_HOME=/kaspa
@@ -17,6 +18,11 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
     jq \
+    wget \
+    unzip \
+    openssl \
+    net-tools \
+    procps \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

@@ -92,13 +92,25 @@ docker compose down -v
 ### ⛏️ Gestion du minage
 
 ```bash
+# Démarrage unifié (recommandé)
+./scripts/kaspa-unified-start.sh --pool stratum+tcp://pool.woolypooly.com:3112 kaspa:votre_adresse
+./scripts/kaspa-unified-start.sh --solo kaspa:votre_adresse
+
 # Gestionnaire de minage
 ./scripts/mining-manager.sh status    # Statut
 ./scripts/mining-manager.sh start     # Démarrer
 ./scripts/mining-manager.sh stop      # Arrêter
 ./scripts/mining-manager.sh logs      # Logs
 ./scripts/mining-manager.sh stats     # Statistiques
-./scripts/mining-manager.sh multi     # Multi-mineurs
+
+# Gestion des wallets
+./scripts/create-wallet-cli.sh        # Créer wallet CLI
+./scripts/backup-wallet.sh             # Sauvegarde sécurisée
+./scripts/configure-pool-mining.sh     # Configuration pool
+
+# Tests et vérifications
+./scripts/test-kaspa-binaries.sh       # Test des binaires
+./scripts/check-mining-system.sh       # Vérification système
 
 # Surveillance
 curl http://localhost:8080/stats      # API stats
@@ -168,11 +180,16 @@ cd frontend
 pnpm test
 ```
 
-## 📚 API Documentation
+## 📚 Documentation
 
-Une fois l'API démarrée, consultez:
+### API
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+### Guides complets
+- **Guide de minage**: [MINING_GUIDE.md](MINING_GUIDE.md)
+- **Guide de sécurité**: [KASPA_SECURITY_GUIDE.md](KASPA_SECURITY_GUIDE.md)
+- **Guide des wallets**: [KASPA_WALLET_GUIDE.md](KASPA_WALLET_GUIDE.md)
 
 ## 🤝 Contribution
 
