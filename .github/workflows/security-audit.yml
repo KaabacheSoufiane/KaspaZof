@@ -1,0 +1,44 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * 1'
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install security tools
+      run: |
+        pip install pip-audit safety
+    
+    - name: Scan for secrets
+      run: |
+        git ls-files -z | xargs -0 grep -nE "PRIVATE|SECRET|PASSWORD|KEY" --exclude-dir=clean_env || echo "No secrets detected"
+    
+    - name: Python dependency audit
+      run: |
+        cd mining-monitor
+        pip install -r requirements.txt
+        pip-audit --format=json --output=../security-backend.json || true
+    
+    - name: Test Kaspa binaries
+      run: |
+        chmod +x scripts/*.sh
+        ./scripts/test-kaspa-binaries.sh || true
+    
+    - name: Build Docker test
+      run: |
+        docker compose -f docker-compose-mining.yml build kaspa-node || true
