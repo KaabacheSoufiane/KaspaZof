@@ -1,0 +1,238 @@
+version: '3.8'
+
+services:
+  # Nœud Kaspa officiel
+  kaspa-node:
+    build:
+      context: ./kaspa-wallet
+      dockerfile: Dockerfile
+    container_name: kaspazof-kaspa-node
+    restart: unless-stopped
+    command: ["node"]
+    environment:
+      - KASPA_NETWORK=mainnet
+      - KASPA_LOG_LEVEL=info
+      - KASPA_RPC_USER=kaspa
+      - KASPA_RPC_PASS=${KASPA_RPC_PASSWORD:-changeme123}
+    ports:
+      - "127.0.0.1:16210:16210"  # RPC - localhost uniquement
+      - "127.0.0.1:16211:16211"  # P2P - localhost uniquement
+    volumes:
+      - kaspa_node_data:/kaspa/data
+      - kaspa_node_config:/kaspa/config
+      - kaspa_logs:/kaspa/logs
+    networks:
+      - kaspa_network
+    healthcheck:
+      test: ["CMD", "kaspactl", "--rpcserver=localhost:16210", "get-info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Wallet Kaspa
+  kaspa-wallet:
+    build:
+      context: ./kaspa-wallet
+      dockerfile: Dockerfile
+    container_name: kaspazof-kaspa-wallet
+    restart: unless-stopped
+    command: ["wallet"]
+    environment:
+      - KASPA_NETWORK=mainnet
+      - KASPA_RPC_SERVER=kaspa-node:16210
+      - KASPA_RPC_USER=kaspa
+      - KASPA_RPC_PASS=${KASPA_RPC_PASSWORD:-changeme123}
+      - WAIT_FOR_NODE=true
+    volumes:
+      - kaspa_wallet_data:/kaspa/data
+      - kaspa_wallet_config:/kaspa/config
+      - kaspa_logs:/kaspa/logs
+    networks:
+      - kaspa_network
+    depends_on:
+      kaspa-node:
+        condition: service_healthy
+
+  # Miner Kaspa (optionnel)
+  kaspa-miner:
+    build:
+      context: ./kaspa-wallet
+      dockerfile: Dockerfile
+    container_name: kaspazof-kaspa-miner
+    restart: unless-stopped
+    command: ["miner"]
+    environment:
+      - KASPA_NETWORK=mainnet
+      - KASPA_RPC_SERVER=kaspa-node:16210
+      - KASPA_RPC_USER=kaspa
+      - KASPA_RPC_PASS=${KASPA_RPC_PASSWORD:-changeme123}
+      - MINING_ADDRESS=${MINING_ADDRESS:-kaspa:qz0000000000000000000000000000000000000000000000000000000000}
+      - NUM_BLOCKS=0
+    volumes:
+      - kaspa_logs:/kaspa/logs
+    networks:
+      - kaspa_network
+    depends_on:
+      kaspa-node:
+        condition: service_healthy
+    profiles:
+      - mining  # Démarrer seulement avec --profile mining
+
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaspazof-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kaspazof
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - kaspa_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: kaspazof-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - kaspa_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 3
+
+  # Storage MinIO
+  minio:
+    image: minio/minio:latest
+    container_name: kaspazof-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    networks:
+      - kaspa_network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      retries: 3
+
+  # Backend API KaspaZof
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: kaspazof-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: http://minio:9000
+      KASPA_RPC_URL: http://kaspa-node:16210
+      KASPA_RPC_USER: kaspa
+      KASPA_RPC_PASS: ${KASPA_RPC_PASSWORD:-changeme123}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - wallet_data:/app/wallets
+    networks:
+      - kaspa_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kaspa-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      retries: 3
+
+  # Frontend
+  frontend:
+    image: nginx:alpine
+    container_name: kaspazof-frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./frontend-bootstrap:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - kaspa_network
+    depends_on:
+      - api
+
+  # Monitoring Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: kaspazof-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - kaspa_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  # Monitoring Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: kaspazof-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - kaspa_network
+    depends_on:
+      - prometheus
+
+volumes:
+  # Kaspa volumes
+  kaspa_node_data:
+  kaspa_node_config:
+  kaspa_wallet_data:
+  kaspa_wallet_config:
+  kaspa_logs:
+  
+  # Application volumes
+  postgres_data:
+  redis_data:
+  minio_data:
+  wallet_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  kaspa_network:
+    driver: bridge
+    internal: false

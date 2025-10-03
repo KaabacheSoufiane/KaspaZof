@@ -1,0 +1,74 @@
+groups:
+  - name: kaspa_mining_alerts
+    rules:
+      # Alerte si le hashrate chute drastiquement
+      - alert: MiningHashrateDropped
+        expr: kaspa_mining_hashrate < 1000000  # Moins de 1 MH/s
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hashrate de minage Kaspa faible"
+          description: "Le hashrate est tombé à {{ $value }} H/s pendant plus de 5 minutes"
+
+      # Alerte si aucun bloc trouvé depuis longtemps
+      - alert: NoBlocksFound
+        expr: increase(kaspa_mining_blocks_found_total[6h]) == 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Aucun bloc Kaspa trouvé récemment"
+          description: "Aucun bloc n'a été trouvé dans les 6 dernières heures"
+
+      # Alerte si le nœud Kaspa est déconnecté
+      - alert: KaspaNodeDown
+        expr: up{job="kaspa-mining-monitor"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nœud Kaspa hors ligne"
+          description: "Le nœud Kaspa n'est pas accessible depuis 2 minutes"
+
+      # Alerte si peu de peers connectés
+      - alert: LowPeerCount
+        expr: kaspa_node_peer_count < 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nombre de peers Kaspa faible"
+          description: "Seulement {{ $value }} peers connectés au nœud Kaspa"
+
+      # Alerte si la difficulté change drastiquement
+      - alert: DifficultySpike
+        expr: increase(kaspa_mining_difficulty[1h]) > (kaspa_mining_difficulty * 0.5)
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Augmentation importante de la difficulté Kaspa"
+          description: "La difficulté a augmenté de plus de 50% en 1 heure"
+
+  - name: kaspa_system_alerts
+    rules:
+      # Alerte si l'API KaspaZof est down
+      - alert: KaspaZofAPIDown
+        expr: up{job="kaspazof-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API KaspaZof hors ligne"
+          description: "L'API KaspaZof n'est pas accessible"
+
+      # Alerte si le service de monitoring est down
+      - alert: MiningMonitorDown
+        expr: up{job="kaspa-mining-monitor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service de monitoring du minage hors ligne"
+          description: "Le service de monitoring du minage n'est pas accessible"

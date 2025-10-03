@@ -1,0 +1,196 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "KaspaZof - Mining Dashboard",
+    "tags": ["kaspa", "mining", "kaspazof"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Hashrate de Minage",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_mining_hashrate",
+            "legendFormat": "Hashrate (H/s)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 1000000},
+                {"color": "green", "value": 10000000}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Difficulté du Réseau",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_mining_difficulty",
+            "legendFormat": "Difficulté"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Hauteur du Bloc",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_node_block_height",
+            "legendFormat": "Hauteur"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "continuous-GrYlRd"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Peers Connectés",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_node_peer_count",
+            "legendFormat": "Peers"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 3},
+                {"color": "green", "value": 8}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Évolution du Hashrate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "kaspa_mining_hashrate",
+            "legendFormat": "Hashrate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Évolution de la Difficulté",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "kaspa_mining_difficulty",
+            "legendFormat": "Difficulté"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 7,
+        "title": "Blocs Trouvés",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_mining_blocks_found_total",
+            "legendFormat": "Blocs Trouvés"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "continuous-BlPu"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 16}
+      },
+      {
+        "id": 8,
+        "title": "Shares Soumises",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_mining_shares_submitted_total",
+            "legendFormat": "Shares"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {"mode": "continuous-BlPu"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 16}
+      },
+      {
+        "id": 9,
+        "title": "Temps de Fonctionnement",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kaspa_mining_uptime_seconds",
+            "legendFormat": "Uptime"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "continuous-GrYlRd"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

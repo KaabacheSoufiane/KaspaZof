@@ -19,8 +19,10 @@ Moniteur et wallet Kaspa sécurisé avec interface web moderne.
 - Docker & Docker Compose
 - Node.js 18+ (pour le développement frontend)
 - Git
+- 8GB+ RAM (pour le minage)
+- 50GB+ espace disque libre
 
-### Installation
+### Installation standard
 
 ```bash
 # 1. Cloner le repository
@@ -34,6 +36,19 @@ cd KaspaZof
 ./scripts/quick-start.sh
 ```
 
+### 🚀 Installation avec minage Kaspa
+
+```bash
+# 1. Vérifier le système
+./scripts/check-mining-system.sh
+
+# 2. Configurer l'adresse de minage dans .env
+nano .env  # Modifier MINING_ADDRESS
+
+# 3. Démarrer le minage
+./scripts/start-mining.sh votre_adresse_kaspa
+```
+
 ### Accès aux interfaces
 
 - 🌐 **Frontend**: http://localhost:8081
@@ -41,6 +56,7 @@ cd KaspaZof
 - 📊 **Grafana**: http://localhost:3000
 - 📈 **Prometheus**: http://localhost:9090
 - 💾 **MinIO**: http://localhost:9001
+- ⛏️ **Mining Monitor**: http://localhost:8080
 
 ## 🔧 Développement
 
@@ -71,6 +87,22 @@ docker compose down
 
 # Nettoyage complet (⚠️ supprime les données)
 docker compose down -v
+```
+
+### ⛏️ Gestion du minage
+
+```bash
+# Gestionnaire de minage
+./scripts/mining-manager.sh status    # Statut
+./scripts/mining-manager.sh start     # Démarrer
+./scripts/mining-manager.sh stop      # Arrêter
+./scripts/mining-manager.sh logs      # Logs
+./scripts/mining-manager.sh stats     # Statistiques
+./scripts/mining-manager.sh multi     # Multi-mineurs
+
+# Surveillance
+curl http://localhost:8080/stats      # API stats
+docker compose -f docker-compose-mining.yml logs -f kaspa-miner-1
 ```
 
 ### Développement frontend

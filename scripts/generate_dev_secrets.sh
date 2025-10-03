@@ -46,9 +46,16 @@ MINIO_ENDPOINT=http://minio:9000
 DASHBOARD_API_KEY=$(generate_key)
 JWT_SECRET_KEY=$(generate_key)
 
-# Kaspa
-KASPA_RPC_URL=http://kaspa:16210
+# Kaspa Node
+KASPA_RPC_URL=http://kaspa-node:16210
+KASPA_RPC_USER=kaspa
+KASPA_RPC_PASSWORD=$(generate_password)
 KASPA_NETWORK=mainnet
+
+# Minage Kaspa
+MINING_ADDRESS=kaspa:qz0000000000000000000000000000000000000000000000000000000000
+MINING_ENABLED=false
+MINERS_COUNT=1
 
 # Monitoring
 GRAFANA_PASSWORD=$(generate_password)
@@ -76,6 +83,8 @@ echo "   - MINIO_ROOT_PASSWORD"
 echo "   - DASHBOARD_API_KEY"
 echo "   - JWT_SECRET_KEY"
 echo "   - GRAFANA_PASSWORD"
+echo "   - KASPA_RPC_PASSWORD"
+echo "   - MINING_ADDRESS (exemple)"
 echo ""
 echo "⚠️  IMPORTANT:"
 echo "   - Ce fichier contient des secrets de DÉVELOPPEMENT uniquement"
