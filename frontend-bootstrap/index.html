@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <base href="./">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="description" content="KaspaZof - Plateforme complète de mining et wallet Kaspa">
+    <title>KaspaZof - Kaspa Mining & Wallet Platform</title>
+    
+    <!-- Bootstrap 5 & CoreUI -->
+    <link href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.3.0/dist/css/coreui.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@coreui/icons@3.0.1/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --kaspa-primary: #2563eb;
+            --kaspa-success: #10b981;
+            --kaspa-warning: #f59e0b;
+        }
+        .sidebar-brand-full { color: var(--kaspa-primary); font-weight: bold; }
+        .kaspa-card { border-left: 4px solid var(--kaspa-primary); }
+        .wallet-address { font-family: monospace; background: #f8f9fa; padding: 0.25rem; border-radius: 0.25rem; }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
+        <div class="sidebar-header border-bottom">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-full">🚀 KaspaZof</div>
+            </div>
+        </div>
+        
+        <ul class="sidebar-nav" data-coreui="navigation" data-simplebar>
+            <li class="nav-item">
+                <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                    📊 Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('wallet')">
+                    💰 Wallet
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('mining')">
+                    ⛏️ Mining
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('charts')">
+                    📈 Charts
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('news')">
+                    📰 News
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Wrapper -->
+    <div class="wrapper d-flex flex-column min-vh-100">
+        <!-- Header -->
+        <header class="header header-sticky p-0 mb-4">
+            <div class="container-fluid border-bottom px-4">
+                <button class="header-toggler" type="button" onclick="coreui.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
+                    ☰
+                </button>
+                <ul class="header-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="nav-link" id="connection-status">🟢 Connecté</span>
+                    </li>
+                </ul>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="body flex-grow-1">
+            <div class="container-lg px-4">
+                
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="content-section">
+                    <div class="row g-4 mb-4">
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="card text-white bg-primary">
+                                <div class="card-body">
+                                    <div class="fs-4 fw-semibold" id="kaspa-price">$0.000000</div>
+                                    <div>Prix Kaspa</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="card text-white bg-success">
+                                <div class="card-body">
+                                    <div class="fs-4 fw-semibold" id="mining-hashrate">0 H/s</div>
+                                    <div>Mining</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="card text-white bg-info">
+                                <div class="card-body">
+                                    <div class="fs-4 fw-semibold" id="node-blocks">0</div>
+                                    <div>Blocs</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-xl-3">
+                            <div class="card text-white bg-warning">
+                                <div class="card-body">
+                                    <div class="fs-4 fw-semibold" id="wallet-balance">0 KAS</div>
+                                    <div>Balance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Prix Kaspa</h4>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="main-chart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wallet Section -->
+                <div id="wallet-section" class="content-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <h4>Mes Wallets</h4>
+                            <button class="btn btn-primary" onclick="createWallet()">Créer Wallet</button>
+                        </div>
+                        <div class="card-body" id="wallet-list">
+                            <div class="text-center py-5">
+                                <h5>Aucun wallet</h5>
+                                <p>Créez votre premier wallet Kaspa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mining Section -->
+                <div id="mining-section" class="content-section" style="display: none;">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Configuration Mining</h4>
+                                </div>
+                                <div class="card-body" id="mining-config">
+                                    <div class="mb-3">
+                                        <label class="form-label">Pool Mining</label>
+                                        <select class="form-select" id="mining-pool">
+                                            <option value="solo">Solo Mining</option>
+                                            <option value="pool1">KaspaPool.org</option>
+                                            <option value="pool2">Woolypooly</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Wallet Address</label>
+                                        <input type="text" class="form-control" id="mining-wallet" placeholder="kaspa:...">
+                                    </div>
+                                    <button class="btn btn-success" id="start-mining" onclick="toggleMining()">Démarrer Mining</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4>Performance</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="mining-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div id="charts-section" class="content-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Analyse Prix</h4>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="price-chart" style="height: 400px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- News Section -->
+                <div id="news-section" class="content-section" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Actualités Crypto</h4>
+                        </div>
+                        <div class="card-body" id="news-feed">
+                            <div class="text-center py-5">
+                                <h5>Chargement des actualités...</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer px-4">
+            <div>KaspaZof &copy; 2025 BJATechnology</div>
+            <div class="ms-auto">Powered by Kaspa</div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.3.0/dist/js/coreui.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/kaspazof-app.js"></script>
+</body>
+</html>
